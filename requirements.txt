@@ -1,0 +1,11 @@
+rdflib
+xmltodict
+lxml
+pyyaml
+pytz
+pymysql
+autopep8
+pytest
+nose
+requests
+cryptography

@@ -1,0 +1,23 @@
+vivo:
+  url: https://vivo-example.com/
+  username: youruser 
+  password: yourpassword
+  
+elements:
+  url: https://exampleapi.com/
+  authorization: yourtoken
+
+folders:
+  upload: /yourpath/vivouploads/
+  photo: /yourpath/harvestedImages/
+  localurl: http://exampleapi.com/
+
+db:
+  host: localhost
+  port: 3306
+  user: youruser
+  password: yourpassword
+  database: example
+
+logging:
+  file: /yourpath/logging_config.ini
