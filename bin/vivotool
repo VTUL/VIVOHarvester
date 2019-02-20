@@ -151,40 +151,36 @@ if args.optype == "ingest":
         vivo = VIVO()
 
         for rdf_file in user_rdf_files:
-            response = vivo.request_vivo(
-                rdfurl,
-                "users/" +
-                rdf_file,
+            objectns = file_utils.read_file(userrdfpath+rdf_file)
+            response = vivo.insert_vivo(
+                objectns,
                 vivo_endpoint,
                 headers,
                 data)
             logger.debug(response.text)
             os.remove(userrdfpath + rdf_file)
         for rdf_file in photo_rdf_files:
-            response = vivo.request_vivo(
-                rdfurl,
-                "photos/" +
-                rdf_file,
+            objectns = file_utils.read_file(photordfpath + rdf_file)
+            response = vivo.insert_vivo(
+                objectns,
                 vivo_endpoint,
                 headers,
                 data)
             logger.debug(response.text)
             os.remove(photordfpath + rdf_file)
         for rdf_file in pub_rdf_files:
-            response = vivo.request_vivo(
-                rdfurl,
-                "publications/" +
-                rdf_file,
+            objectns = file_utils.read_file(pubrdfpath + rdf_file)
+            response = vivo.insert_vivo(
+                objectns,
                 vivo_endpoint,
                 headers,
                 data)
             logger.debug(response.text)
             os.remove(pubrdfpath + rdf_file)
         for rdf_file in rs_rdf_files:
-            response = vivo.request_vivo(
-                rdfurl,
-                "relations/" +
-                rdf_file,
+            objectns = file_utils.read_file(rsrdfpath + rdf_file)
+            response = vivo.insert_vivo(
+                objectns,
                 vivo_endpoint,
                 headers,
                 data)

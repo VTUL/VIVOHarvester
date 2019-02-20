@@ -64,4 +64,4 @@ class RelationshipTranslator(object):
             g = Graph()
             self.__add_bindings(g)
             vivo_authorship.add_to_graph(g)
-            g.serialize(target_dir + vivo_authorship.id + ".rdf")
+            g.serialize(target_dir + vivo_authorship.id + ".rdf", format='nt')

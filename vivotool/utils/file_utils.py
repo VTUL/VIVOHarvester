@@ -14,6 +14,12 @@ class Utils:
             file.write(block)
         file.close()
 
+    def read_file(self, filename):
+
+        with open(filename, 'r') as file:
+            rdfcontent=file.read()
+
+        return rdfcontent
 
     def save_xml_file(self, content, filename):
 

@@ -14,7 +14,7 @@ class UserElementXml2Rdf(object):
         if user:
             g = Graph()
             user.add_to_graph(g)
-            g.serialize(rdf_filename)
+            g.serialize(rdf_filename, format='nt')
 
     def __get_datetime(self, doc_date):
         yyyy = int(doc_date['api:year'])        # year is required

@@ -243,7 +243,7 @@ class PublicationXml2Rdf(object):
                 publication.add_to_graph(g)
                 rdf_file = os.path.splitext(
                     os.path.basename(fileName))[0] + ".rdf"
-                g.serialize(target_dir + rdf_file)
+                g.serialize(target_dir + rdf_file, format='nt')
                 print("Resulting RDF graph in: " + rdf_file)
         except KeyError as key_error:
             print('Error parsing ' + fileName + ' due to ' + str(key_error))

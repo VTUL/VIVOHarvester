@@ -64,4 +64,4 @@ class Photo:
              VITRO_PUBLIC.directDownloadUrl,
              thumbnailDownloadUrl))
 
-        return g.serialize()
+        return g.serialize(format='nt')
