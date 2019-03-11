@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="VIVOHarvester",
-    version="0.1.1",
+    version="0.1.15",
     author="Yinlin Chen, Tingting Jiang, Lee Hunter",
     author_email="ylchen@vt.edu, virjtt03@vt.edu, whunter@vt.edu",
     description="VIVO harvester",

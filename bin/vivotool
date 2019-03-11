@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding=utf8
 import argparse
 import collections
 import logging
@@ -20,6 +21,8 @@ from vivotool.utils.userxmltordf import UserElementXml2Rdf
 from vivotool.harvester.elements import Elements
 from vivotool.vivo.vivo import VIVO
 
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--file", "-f", type=str, required=True)
@@ -78,6 +81,8 @@ if args.optype == "ingest":
 
     try:
         for xmlfile in user_xml_files:
+            logger.debug("Start parsing: " + userxmlpath + xmlfile)
+
             with open(userxmlpath + xmlfile) as fd:
                 doc = xmltodict.parse(fd.read())
 
@@ -103,6 +108,8 @@ if args.optype == "ingest":
 
     try:
         for xmlfile in pub_xml_files:
+            logger.debug("Start parsing: " + pubxmlpath + xmlfile)
+
             pub_xml_to_rdf.parse(
                 pubxmlpath + xmlfile,
                 pubrdfpath)
@@ -115,6 +122,8 @@ if args.optype == "ingest":
 
     try:
         for xmlfile in rs_xml_files:
+            logger.debug("Start parsing: " + rsxmlpath + xmlfile)
+
             translator.run(
                 rsxmlpath +
                 xmlfile,
@@ -523,6 +532,10 @@ elif args.optype == "harvest":
                         visible = e["api:relationship"]["api:is-visible"]
                         public = e["api:relationship"]["api:related"]["api:object"]["api:is-public"]
 
+                        if args.admin == "publicall":
+                            public = "true"
+                            visible = "true"
+
                         db_op = "none"
                         if public == "true" and visible == "true":
                             logger.debug(
@@ -672,6 +685,11 @@ elif args.optype == "harvest":
                         public = e["api:relationship"]["api:related"]["api:object"]["api:is-public"]
                     else:
                         visible = "false"
+
+                    if args.admin == "publicall":
+                        visible = "true"
+                        public = "true"
+
 
                     # check if rec is already in db
                     isExist = False

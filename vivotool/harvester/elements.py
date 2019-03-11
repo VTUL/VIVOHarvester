@@ -72,8 +72,6 @@ class Elements(object):
             query_url = self.createElementsQueryURL(
                 elements_endpoint, query_type, params)
 
-        print(query_url)
-
         if query_type == "photo":
             response = self.elements_request(query_url, headers, "photo")
             file_utils.save_photo_file(

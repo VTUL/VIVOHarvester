@@ -6,7 +6,7 @@ User Model
 Modified + Inspired by:
   https://github.com/andreasf/pentabarf-rdf/
 """
-
+import re
 from rdflib import Graph, BNode, Namespace, Literal, URIRef, RDF, RDFS, URIRef, XSD
 from rdflib.namespace import FOAF, DC, RDFS, RDF
 
@@ -50,15 +50,21 @@ class User:
         # if not self.first_name:
         #     return
 
-        if self.last_name and self.initial:
-            return '-{}-{}'.format(self.last_name.encode('utf-8').lower(),
-                                   self.initial.encode('utf-8').lower())
-        elif self.last_name and self.first_name:
-            return '{}, {}'.format(
-                self.last_name.encode('utf-8'),
-                self.first_name.encode('utf-8'))
+        if self.last_name and self.first_name:
+            return '{}, {}'.format(self.last_name.encode('utf-8'), self.first_name.encode('utf-8'))
+        elif self.last_name and self.initial:
+            return '{}, {}'.format(self.last_name.encode('utf-8'), self.initial.encode('utf-8'))
         elif self.last_name:
-            return '-{}'.format(self.last_name.encode('utf-8').lower())
+            return '{}'.format(self.last_name.encode('utf-8'))
+
+    def name_in_uri(self):
+        if self.last_name and self.initial:
+            name = '-{}-{}'.format(self.last_name.encode('utf-8'),
+                                   self.initial.encode('utf-8'))
+        elif self.last_name:
+            return '-{}'.format(self.last_name.encode('utf-8'))
+        name = re.sub(r'["<>#%\{\}\|\\\^~\[\]`]', '', name)
+        return name.lower().replace(' ', '-')
 
     def add_to_graph(self, graph):
 
@@ -80,7 +86,7 @@ class User:
                 degree.add_to_graph(graph, self)
 
         graph.add((user, RDF.type, VIVO[self.classification]))
-        graph.add((user, RDFS.label, Literal(self.display_name())))
+        graph.add((user, RDFS.label, Literal(self.display_name().decode('utf-8'))))
         self.vcard.add_to_graph(graph)
 
     def __add_bindings(self, graph):
@@ -147,7 +153,7 @@ class Degree:
              RDFS.label,
              Literal(
                  '{}: {}'.format(
-                     user_obj.display_name(),
+                     user_obj.display_name().decode('utf-8'),
                      self.label))))
         graph.add((awarded_degree, VIVO.assignedBy, degree_institution))
         graph.add((degree_institution, VIVO.relatedBy, awarded_degree))
@@ -301,9 +307,9 @@ class VCard:
             user = self.user.uri
             # person vcard
             vt_vcard = COLLAB_VT['personvcard' +
-                                 self.user.display_name().decode('utf-8')]
+                                 self.user.name_in_uri().decode('utf-8')]
             vt_vcardname = COLLAB_VT['personvcardname' +
-                                     self.user.display_name().decode('utf-8')]
+                                     self.user.name_in_uri().decode('utf-8')]
         else:
             user = COLLAB_VT[self.user.username]
 

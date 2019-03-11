@@ -201,10 +201,10 @@ class Authorship:
         elif self.user.last_name:
             with_initial = self.user.initial is not ''
             this = COLLAB_VT['authorship' + self.publication.id +
-                             self.user.display_name().decode('utf-8')]
+                             self.user.name_in_uri().decode('utf-8')]
             self.user.classification = 'NonFacultyAcademic'
             self.user.uri = COLLAB_VT['person' +
-                                      self.user.display_name().decode('utf-8')]
+                                      self.user.name_in_uri().decode('utf-8')]
             self.user.add_to_graph(graph)
         else:
             return

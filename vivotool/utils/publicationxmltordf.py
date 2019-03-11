@@ -8,9 +8,6 @@ from datetime import datetime
 from vivotool.utils.models.publication_model import Publication, \
     PublicationDate, Journal, WebpagesPublisher, Authorship, SubjectArea
 from vivotool.utils.models.user_model import User
-# from utils.models.user_model import User
-# from utils.models.publication_model import Publication, PublicationDate, \
-#     Journal, WebpagesPublisher, Authorship, SubjectArea
 
 
 class PublicationXml2Rdf(object):
@@ -142,7 +139,7 @@ class PublicationXml2Rdf(object):
                             publication.title = f["api:text"].strip('.')
                         elif f_name == "abstract":
                             publication.abstract = f["api:text"]
-                        elif f_name == "pagination":
+                        elif f_name == "pagination" and f["api:pagination"]:
                             pagination = f["api:pagination"]
                             if "api:begin-page" in pagination.keys():
                                 publication.page_start = pagination["api:begin-page"]
@@ -236,7 +233,7 @@ class PublicationXml2Rdf(object):
         try:
             with open(fileName) as fd:
                 doc = xmltodict.parse(fd.read())
-            print("Start parsing: " + fileName)
+
             publication = self.__get_publication(doc)
             if publication:
                 g = Graph()
