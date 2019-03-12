@@ -5,10 +5,9 @@ pyyaml
 pytz
 pymysql
 autopep8
-pytest
 nose
 requests
 cryptography
 coverage
-pytest
+pytest==4.3.0
 pytest-cov
