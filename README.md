@@ -4,6 +4,11 @@
 ```
 pip install VIVOHarvester
 ```
+or
+```
+git clone git@github.com:VTUL/VIVOHarvester.git
+python setup.py install
+```
 
 ## Usage
 * Harvest data from Elements (Default)
@@ -45,6 +50,13 @@ pip install VIVOHarvester==0.1.2 (e.g.)
 ## Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
+
+## Testing
+```
+py.test --cov=vivotool test/
+coverage report -m
+coverage report
+```
 
 ## Versioning
 

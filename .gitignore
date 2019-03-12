@@ -13,5 +13,5 @@ venv/*
 build/*
 
 .DS_Store
-
+.coverage
 local.yml

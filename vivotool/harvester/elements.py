@@ -10,7 +10,6 @@ import yaml
 
 from datetime import datetime, timedelta
 from vivotool.utils.file_utils import Utils
-# from utils.file_utils import Utils
 
 
 class Elements(object):
@@ -136,6 +135,15 @@ class Elements(object):
         return query_url
 
     def last_modified_date(self, day):
+
+        try:
+            val = int(day)
+        except ValueError:
+            raise
+
+        if day <= 0:
+            logging.error("day should be positive number")
+            return ""
 
         sinceday = datetime.now() - timedelta(days=day)
 
