@@ -9,5 +9,6 @@ nose
 requests
 cryptography
 coverage
-pytest==4.3.0
+pytest
 pytest-cov
+requests_mock

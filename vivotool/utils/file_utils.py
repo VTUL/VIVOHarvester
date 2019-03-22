@@ -1,5 +1,9 @@
 import os
 import logging
+import shutil
+
+from os import path
+
 
 class Utils:
     """docstring for Utils"""
@@ -19,7 +23,7 @@ class Utils:
         rdfcontent = ""
         try:
             with open(filename, "r") as file:
-                rdfcontent=file.read()
+                rdfcontent = file.read()
         except Exception:
             logging.exception("")
 
@@ -42,7 +46,6 @@ class Utils:
 
         return all_files
 
-
     def listdeletefiles(self, path, pattern):
 
         all_files = list(
@@ -51,3 +54,20 @@ class Utils:
                 os.listdir(path)))
 
         return all_files
+
+    def segmentlist(self, inputlist, length):
+
+        result = []
+        result = [inputlist[x:x + length]
+                  for x in range(0, len(inputlist), length)]
+
+        return result
+
+    def mergefiles(self, folderpath, inputlist, mergefilename):
+
+        with open(path.join(folderpath, mergefilename), 'wb') as wfd:
+            for f in inputlist:
+                with open(path.join(folderpath, f), 'rb') as fd:
+                    shutil.copyfileobj(fd, wfd, 1024 * 1024 * 10)
+
+        return mergefilename

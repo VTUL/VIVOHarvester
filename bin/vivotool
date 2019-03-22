@@ -20,6 +20,7 @@ from vivotool.utils.relationxmltordf import RelationshipTranslator
 from vivotool.utils.userxmltordf import UserElementXml2Rdf
 from vivotool.harvester.elements import Elements
 from vivotool.vivo.vivo import VIVO
+# from importlib import reload
 
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -124,7 +125,7 @@ if args.optype == "ingest":
         for xmlfile in rs_xml_files:
             logger.debug("Start parsing: " + rsxmlpath + xmlfile)
 
-            translator.run(
+            translator.parse(
                 rsxmlpath +
                 xmlfile,
                 rsrdfpath)
@@ -135,6 +136,51 @@ if args.optype == "ingest":
 
     # ingest to VIVO
     extension = '.rdf'
+    user_rdf_files = file_utils.listfiles(userrdfpath, extension)
+    photo_rdf_files = file_utils.listfiles(photordfpath, extension)
+    pub_rdf_files = file_utils.listfiles(pubrdfpath, extension)
+    rs_rdf_files = file_utils.listfiles(rsrdfpath, extension)
+
+    templist = file_utils.segmentlist(user_rdf_files, 10)
+    i = 1
+    for t in templist:
+        mergefilename = "usermerge" + str(i) + ".rdf"
+        file_utils.mergefiles(userrdfpath, t, mergefilename)
+        i += 1
+
+    for rdf_file in user_rdf_files:
+        os.remove(userrdfpath + rdf_file)
+
+    templist = file_utils.segmentlist(photo_rdf_files, 10)
+    i = 1
+    for t in templist:
+        mergefilename = "photomerge" + str(i) + ".rdf"
+        file_utils.mergefiles(photordfpath, t, mergefilename)
+        i += 1
+
+    for rdf_file in photo_rdf_files:
+        os.remove(photordfpath + rdf_file)
+
+    templist = file_utils.segmentlist(pub_rdf_files, 10)
+    i = 1
+    for t in templist:
+        mergefilename = "pubmerge" + str(i) + ".rdf"
+        file_utils.mergefiles(pubrdfpath, t, mergefilename)
+        i += 1
+
+    for rdf_file in pub_rdf_files:
+        os.remove(pubrdfpath + rdf_file)
+
+    templist = file_utils.segmentlist(rs_rdf_files, 10)
+    i = 1
+    for t in templist:
+        mergefilename = "rsmerge" + str(i) + ".rdf"
+        file_utils.mergefiles(rsrdfpath, t, mergefilename)
+        i += 1
+
+    for rdf_file in rs_rdf_files:
+        os.remove(rsrdfpath + rdf_file)
+
     user_rdf_files = file_utils.listfiles(userrdfpath, extension)
     photo_rdf_files = file_utils.listfiles(photordfpath, extension)
     pub_rdf_files = file_utils.listfiles(pubrdfpath, extension)
@@ -160,39 +206,31 @@ if args.optype == "ingest":
         vivo = VIVO()
 
         for rdf_file in user_rdf_files:
-            objectns = file_utils.read_file(userrdfpath+rdf_file)
-            response = vivo.insert_vivo(
-                objectns,
-                vivo_endpoint,
-                headers,
-                data)
+            objectns = file_utils.read_file(userrdfpath + rdf_file)
+            reqcontent = vivo.get_query_content(objectns, "insert")
+            response = vivo.request_vivo(
+                reqcontent, vivo_endpoint, headers, data, "update")
             logger.debug(response.text)
             os.remove(userrdfpath + rdf_file)
         for rdf_file in photo_rdf_files:
             objectns = file_utils.read_file(photordfpath + rdf_file)
-            response = vivo.insert_vivo(
-                objectns,
-                vivo_endpoint,
-                headers,
-                data)
+            reqcontent = vivo.get_query_content(objectns, "insert")
+            response = vivo.request_vivo(
+                reqcontent, vivo_endpoint, headers, data, "update")
             logger.debug(response.text)
             os.remove(photordfpath + rdf_file)
         for rdf_file in pub_rdf_files:
             objectns = file_utils.read_file(pubrdfpath + rdf_file)
-            response = vivo.insert_vivo(
-                objectns,
-                vivo_endpoint,
-                headers,
-                data)
+            reqcontent = vivo.get_query_content(objectns, "insert")
+            response = vivo.request_vivo(
+                reqcontent, vivo_endpoint, headers, data, "update")
             logger.debug(response.text)
             os.remove(pubrdfpath + rdf_file)
         for rdf_file in rs_rdf_files:
             objectns = file_utils.read_file(rsrdfpath + rdf_file)
-            response = vivo.insert_vivo(
-                objectns,
-                vivo_endpoint,
-                headers,
-                data)
+            reqcontent = vivo.get_query_content(objectns, "insert")
+            response = vivo.request_vivo(
+                reqcontent, vivo_endpoint, headers, data, "update")
             logger.debug(response.text)
             os.remove(rsrdfpath + rdf_file)
 
@@ -300,22 +338,29 @@ elif args.optype == "harvest":
                     isExist = db.check_exist(dbconn, "users", "pid", username)
 
                 if isExist:
-                    logger.debug("Delete user file:" + all_user_folder + xmlfile)
+                    logger.debug(
+                        "Delete user file:" +
+                        all_user_folder +
+                        xmlfile)
                     # remove user from VIVO for new insert/update or delete
                     uservivourl = vivo_namespace + username
                     logger.debug(uservivourl)
-                    response = vivo.describe_vivo_object(
-                        uservivourl, vivo_query_endpoint, vivoheaders, data)
+                    reqcontent = vivo.get_query_content(
+                        uservivourl, "describe")
+                    response = vivo.request_vivo(
+                        reqcontent, vivo_query_endpoint, vivoheaders, data, "query")
                     rdfcontent = response.text
                     logger.debug(rdfcontent)
-                    response = vivo.delete_vivo_object(
-                        rdfcontent, vivo_update_endpoint, vivoheaders, data)
+                    reqcontent = vivo.get_query_content(rdfcontent, "delete")
+                    response = vivo.request_vivo(
+                        reqcontent, vivo_update_endpoint, vivoheaders, data, "update")
                     logger.debug(
                         "Delete response from VIVO: %s for deleting %s",
                         response.text,
                         uservivourl)
                     logger.debug("The elements id: " + elementid)
-                    # fetch the publications xml from elements and mark as delete
+                    # fetch the publications xml from elements and mark as
+                    # delete
                     xmlfilename = xml_folder + "xml/temp/delete" + elementid + "publications.xml"
                     elements.harvest_elements_xml(
                         elements_endpoint,
@@ -365,7 +410,8 @@ elif args.optype == "harvest":
 
                         db_op = "toprivate" if isExist else "private"
 
-                        logger.debug('Harvesting: Elements user - ' + elementid)
+                        logger.debug(
+                            'Harvesting: Elements user - ' + elementid)
 
                         filename = xml_folder + "xml/users/" + elementid + ".xml"
                         elements.harvest_elements_xml(
@@ -443,12 +489,14 @@ elif args.optype == "harvest":
                 # remove it from VIVO for new insert or delete
                 pubvivourl = vivo_namespace + "publication" + pubid
                 logger.debug(pubvivourl)
-                response = vivo.describe_vivo_object(
-                    pubvivourl, vivo_query_endpoint, vivoheaders, data)
+                reqcontent = vivo.get_query_content(pubvivourl, "describe")
+                response = vivo.request_vivo(
+                    reqcontent, vivo_query_endpoint, vivoheaders, data, "query")
                 rdfcontent = response.text
                 logger.debug(rdfcontent)
-                response = vivo.delete_vivo_object(
-                    rdfcontent, vivo_update_endpoint, vivoheaders, data)
+                reqcontent = vivo.get_query_content(rdfcontent, "delete")
+                response = vivo.request_vivo(
+                    reqcontent, vivo_update_endpoint, vivoheaders, data, "update")
                 logger.debug(
                     "Delete response from VIVO: %s for deleting %s",
                     response.text,
@@ -511,12 +559,16 @@ elif args.optype == "harvest":
                         # remove it from VIVO for new insert or delete
                         pubvivourl = vivo_namespace + "publication" + pubid
                         logger.debug(pubvivourl)
-                        response = vivo.describe_vivo_object(
-                            pubvivourl, vivo_query_endpoint, vivoheaders, data)
+                        reqcontent = vivo.get_query_content(
+                            pubvivourl, "describe")
+                        response = vivo.request_vivo(
+                            reqcontent, vivo_query_endpoint, vivoheaders, data, "query")
                         rdfcontent = response.text
                         logger.debug(rdfcontent)
-                        response = vivo.delete_vivo_object(
-                            rdfcontent, vivo_update_endpoint, vivoheaders, data)
+                        reqcontent = vivo.get_query_content(
+                            rdfcontent, "delete")
+                        response = vivo.request_vivo(
+                            reqcontent, vivo_update_endpoint, vivoheaders, data, "update")
                         logger.debug(
                             "Delete response from VIVO: %s for deleting %s",
                             response.text,
@@ -629,11 +681,13 @@ elif args.optype == "harvest":
                     authorship = vivo_namespace + "authorship" + pubid + "-" + eid
 
                     # remove it from VIVO
-                    response = vivo.describe_vivo_object(
-                        authorship, vivo_query_endpoint, vivoheaders, data)
+                    reqcontent = vivo.get_query_content(authorship, "describe")
+                    response = vivo.request_vivo(
+                        reqcontent, vivo_query_endpoint, vivoheaders, data, "query")
                     rdfcontent = response.text
-                    response = vivo.delete_vivo_object(
-                        rdfcontent, vivo_update_endpoint, vivoheaders, data)
+                    reqcontent = vivo.get_query_content(rdfcontent, "delete")
+                    response = vivo.request_vivo(
+                        reqcontent, vivo_update_endpoint, vivoheaders, data, "update")
                     logger.debug(
                         "Delete response from VIVO: %s for deleting %s",
                         response.text,
@@ -690,7 +744,6 @@ elif args.optype == "harvest":
                         visible = "true"
                         public = "true"
 
-
                     # check if rec is already in db
                     isExist = False
                     if not (args.db == "off"):
@@ -701,11 +754,15 @@ elif args.optype == "harvest":
 
                     if isExist:
                         # remove it from VIVO for new insert or delete anyway
-                        response = vivo.describe_vivo_object(
-                            authorship, vivo_query_endpoint, vivoheaders, data)
+                        reqcontent = vivo.get_query_content(
+                            authorship, "describe")
+                        response = vivo.request_vivo(
+                            reqcontent, vivo_query_endpoint, vivoheaders, data, "query")
                         rdfcontent = response.text
-                        response = vivo.delete_vivo_object(
-                            rdfcontent, vivo_update_endpoint, vivoheaders, data)
+                        reqcontent = vivo.get_query_content(
+                            rdfcontent, "delete")
+                        response = vivo.request_vivo(
+                            reqcontent, vivo_update_endpoint, vivoheaders, data, "update")
                         logger.debug(
                             "Delete response from VIVO: %s for deleting %s",
                             response.text,

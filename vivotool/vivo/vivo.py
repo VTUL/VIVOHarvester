@@ -4,38 +4,37 @@ import requests
 class VIVO:
     """docstring for VIVO"""
 
-    def __init__(self):
-        pass
+    def get_query_content(self, objcontent, optype):
 
-    def insert_vivo(self, objcontent, vivo_endpoint, headers, data):
+        ops = ["describe", "insert", "delete"]
+        if not optype or (optype not in ops):
+            return ""
 
-        query_string = "INSERT DATA {\n" + \
+        query_content = ""
+
+        if optype == "describe":
+            query_content = "DESCRIBE <" + objcontent + ">"
+            return query_content
+
+        query_content = "DATA {\n" + \
             "GRAPH <http://vitro.mannlib.cornell.edu/default/vitro-kb-2> {\n"
-        query_string += objcontent
-        query_string += "}\n}\n"
+        query_content += objcontent
+        query_content += "}\n}\n"
 
-        data["update"] = query_string
-        response = requests.post(vivo_endpoint, headers=headers, data=data)
+        if optype == "insert":
+            query_content = "INSERT " + query_content
+        elif optype == "delete":
+            query_content = "DELETE " + query_content
 
-        return response
+        return query_content
 
-    def describe_vivo_object(self, objecturl, vivo_endpoint, headers, data):
+    def request_vivo(self, reqcontent, vivo_endpoint, headers, data, optype):
 
-        query_string = "DESCRIBE <" + objecturl + ">"
+        ops = ["update", "query"]
+        if not optype or (optype not in ops):
+            return None
 
-        data["query"] = query_string
-        response = requests.post(vivo_endpoint, headers=headers, data=data)
-
-        return response
-
-    def delete_vivo_object(self, objcontent, vivo_endpoint, headers, data):
-
-        query_string = "DELETE DATA {\n" + \
-            "GRAPH <http://vitro.mannlib.cornell.edu/default/vitro-kb-2> {\n"
-        query_string += objcontent
-        query_string += "}\n}\n"
-
-        data["update"] = query_string
+        data[optype] = reqcontent
         response = requests.post(vivo_endpoint, headers=headers, data=data)
 
         return response

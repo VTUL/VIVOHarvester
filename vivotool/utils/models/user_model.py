@@ -51,9 +51,13 @@ class User:
         #     return
 
         if self.last_name and self.first_name:
-            return '{}, {}'.format(self.last_name.encode('utf-8'), self.first_name.encode('utf-8'))
+            return '{}, {}'.format(
+                self.last_name.encode('utf-8'),
+                self.first_name.encode('utf-8'))
         elif self.last_name and self.initial:
-            return '{}, {}'.format(self.last_name.encode('utf-8'), self.initial.encode('utf-8'))
+            return '{}, {}'.format(
+                self.last_name.encode('utf-8'),
+                self.initial.encode('utf-8'))
         elif self.last_name:
             return '{}'.format(self.last_name.encode('utf-8'))
 
@@ -86,7 +90,9 @@ class User:
                 degree.add_to_graph(graph, self)
 
         graph.add((user, RDF.type, VIVO[self.classification]))
-        graph.add((user, RDFS.label, Literal(self.display_name().decode('utf-8'))))
+        graph.add(
+            (user, RDFS.label, Literal(
+                self.display_name().decode('utf-8'))))
         self.vcard.add_to_graph(graph)
 
     def __add_bindings(self, graph):

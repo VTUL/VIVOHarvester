@@ -3,6 +3,7 @@ import rdflib
 from rdflib import Graph, Literal, BNode, RDF, RDFS, URIRef, Namespace
 from rdflib.namespace import FOAF, DC
 
+
 class Photo:
 
     def create_user_photo_graph(self, pid, eid):

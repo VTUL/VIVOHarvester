@@ -74,3 +74,31 @@ class TestFileUtils(TestCase):
         expected = ['deletetest.xml']
         output = self.utils.listdeletefiles(self.test_dir, "delete")
         self.assertEqual(output, expected)
+
+    def test_segmentlist(self):
+
+        inputlist = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        output = self.utils.segmentlist(inputlist, 3)
+        expected = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]]
+
+        self.assertEqual(output, expected)
+
+    def test_mergefiles(self):
+
+        inputlist = ["1.txt", "2.txt", "3.txt", "4.txt", "5.txt"]
+
+        for x in range(1, 6):
+            testfile = path.join(self.test_dir, str(x) + '.txt')
+            with open(testfile, "w") as f:
+                f.write("some content\n")
+
+        testfilename = "mergefile.txt"
+        mergefile = self.utils.mergefiles(
+            self.test_dir, inputlist, testfilename)
+
+        with open(path.join(self.test_dir, mergefile), "r") as file:
+            output = file.read()
+
+        self.assertEqual(
+            output,
+            "some content\nsome content\nsome content\nsome content\nsome content\n")

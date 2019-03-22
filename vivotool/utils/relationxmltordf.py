@@ -1,3 +1,4 @@
+import collections
 import xmltodict
 
 from rdflib import Graph, Literal, BNode, RDF, RDFS, URIRef, Namespace
@@ -14,53 +15,72 @@ class RelationshipTranslator(object):
     def __add_bindings(self, graph):
         graph.bind('vivo', VIVO)
 
-    def __get_user(self, doc, user):
+    def get_user_record(self, doc):
         user_doc = None
         for related in doc['entry']['api:relationship']['api:related']:
             if related['@category'] == 'user':
                 user_doc = related
-        if user_doc is not None:
-            self.__make_user(user_doc, user)
+        return user_doc
 
-    def __make_user(self, user_doc, user):
-        user.user_id = user_doc['api:object']['@id']
-        user.username = user_doc['api:object']['@username']
+    def get_user_email(self, user_doc):
+        user_email = None
+        records = []
+        user_identifier_association = user_doc['api:object'][
+            'api:user-identifier-associations']['api:user-identifier-association']
 
-        for assoc in user_doc['api:object']['api:user-identifier-associations']['api:user-identifier-association']:
+        if isinstance(user_identifier_association, collections.OrderedDict):
+            records.append(user_identifier_association)
+        else:
+            records = user_identifier_association
+
+        email_assoc = None
+        for assoc in records:
             if assoc['@scheme'] == 'email-address':
-                email = assoc
-        if email is not None:
-            user.email = email['#text']
+                email_assoc = assoc
+        if email_assoc is not None:
+            user_email = email_assoc['#text']
+        return user_email
 
-    def __get_publication(self, doc, publication):
+    def get_user_id(self, user_doc):
+        return user_doc['api:object']['@id']
+
+    def get_username(self, user_doc):
+        return user_doc['api:object']['@username']
+
+    def get_publication_record(self, doc):
         pub_doc = None
         for related in doc['entry']['api:relationship']['api:related']:
             if related['@category'] == 'publication':
                 pub_doc = related
+        return pub_doc
 
-        if pub_doc is None:
-            publication.is_publication = False
-        else:
-            self.__make_publication(pub_doc, publication)
+    def get_publication_id(self, pub_doc):
+        return pub_doc['api:object']['@id']
 
-    def __make_publication(self, pub_doc, publication):
-        publication.id = pub_doc['api:object']['@id']
+    def get_authorship_id(self, doc):
+        return doc['entry']['api:relationship']['@id']
 
-    def run(self, input_file, target_dir=""):
+    def parse(self, input_file, target_dir=""):
         with open(input_file) as fd:
             doc = xmltodict.parse(fd.read())
             feed = doc['feed']
 
         vivo_user = User()
-        self.__get_user(feed, vivo_user)
+        user_record = self.get_user_record(feed)
+        if user_record is not None:
+            vivo_user.user_id = self.get_user_id(user_record)
+            vivo_user.username = self.get_username(user_record)
+            vivo_user.email = self.get_user_email(user_record)
 
         vivo_publication = Publication()
-        self.__get_publication(feed, vivo_publication)
-        vivo_authorship = Authorship(vivo_user, vivo_publication)
-        vivo_authorship.id = feed['entry']['api:relationship']['@id']
+        publication_record = self.get_publication_record(feed)
 
-        # only generate rdf if relationship references a publication
-        if vivo_publication.is_publication:
+        if publication_record and user_record:
+            vivo_publication.id = self.get_publication_id(publication_record)
+
+            vivo_authorship = Authorship(vivo_user, vivo_publication)
+            vivo_authorship.id = self.get_authorship_id(feed)
+
             g = Graph()
             self.__add_bindings(g)
             vivo_authorship.add_to_graph(g)

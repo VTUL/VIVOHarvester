@@ -10,17 +10,25 @@ import yaml
 
 from datetime import datetime, timedelta
 from vivotool.utils.file_utils import Utils
+from shutil import copyfile
 
 
 class Elements(object):
     """docstring for ClassName"""
 
-    def __init__(self):
-        pass
-
     def elements_request(self, elementsurl, headers, *category):
 
-        response = requests.get(elementsurl, headers=headers)
+        try:
+            response = requests.get(elementsurl, headers=headers)
+
+        except requests.exceptions.HTTPError as errh:
+            print("Http Error:", errh)
+        except requests.exceptions.ConnectionError as errc:
+            print("Error Connecting:", errc)
+        except requests.exceptions.Timeout as errt:
+            print("Timeout Error:", errt)
+        except requests.exceptions.RequestException as err:
+            print("Something else is wrong", err)
 
         if category and category[0] == "photo":
             return response
@@ -29,6 +37,9 @@ class Elements(object):
             return etree.tostring(result, pretty_print=True)
 
     def get_next_URL(self, content):
+
+        if not content:
+            return ""
 
         result_dict = xmltodict.parse(content)
 
@@ -73,10 +84,18 @@ class Elements(object):
 
         if query_type == "photo":
             response = self.elements_request(query_url, headers, "photo")
-            file_utils.save_photo_file(
-                response, filename + "fullImages/" + params + ".jpeg")
-            file_utils.save_photo_file(
-                response, filename + "thumbnails/" + params + ".jpeg")
+            fullImages = filename + "fullImages/" + params + ".jpeg"
+            thumbnails = filename + "thumbnails/" + params + ".jpeg"
+            if response.status_code == 200:
+                file_utils.save_photo_file(
+                    response, fullImages)
+                file_utils.save_photo_file(
+                    response, thumbnails)
+            else:
+                stubphoto = filename + "thumbnails/userphoto.jpeg"
+                copyfile(stubphoto, fullImages)
+                copyfile(stubphoto, thumbnails)
+
         elif query_type == "users" or query_type == "publications" or query_type == "pubrelationships":
             response = self.elements_request(query_url, headers)
             file_utils.save_xml_file(response, filename)
@@ -102,33 +121,33 @@ class Elements(object):
         query_url = elements_endpoint
 
         if query_type == "user":
-            query_url += "users/" + params
+            query_url += "users/" + str(params)
         elif query_type == "users" and day:
             query_url += "users" + "?detail=full&per-page=" + \
                 str(params) + "&modified-since=" + day[0]
         elif query_type == "users":
             query_url += "users" + "?detail=full&per-page=" + str(params)
         elif query_type == "publications" and day:
-            query_url += "users/" + params + \
+            query_url += "users/" + str(params) + \
                 "/publications?detail=full&per-page=25&modified-since=" + day[0]
         elif query_type == "publications":
-            query_url += "users/" + params + \
+            query_url += "users/" + str(params) + \
                 "/publications?detail=full&per-page=25"
         # elif query_type == "publicationbyday" and day:
         #     query_url += "publications" + "?detail=full&per-page=25" + \
         #         "&modified-since=" + day[0]
         elif query_type == "publication":
-            query_url += "publications/" + params
+            query_url += "publications/" + str(params)
         elif query_type == "relationship":
-            query_url += "relationships/" + params
+            query_url += "relationships/" + str(params)
         elif query_type == "pubrelationships" and day:
-            query_url += "publications/" + params + \
+            query_url += "publications/" + str(params) + \
                 "/relationships?detail=full&per-page=25&modified-since=" + day[0]
         elif query_type == "pubrelationships":
-            query_url += "publications/" + params + \
+            query_url += "publications/" + str(params) + \
                 "/relationships?detail=full&per-page=25"
         elif query_type == "photo":
-            query_url += "users/" + params + "/photo"
+            query_url += "users/" + str(params) + "/photo"
         else:
             raise ValueError('Invalidated input')
 
@@ -142,7 +161,7 @@ class Elements(object):
             raise
 
         if day <= 0:
-            logging.error("day should be positive number")
+            logging.error("day should be a positive number")
             return ""
 
         sinceday = datetime.now() - timedelta(days=day)
