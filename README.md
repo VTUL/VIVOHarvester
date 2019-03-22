@@ -10,6 +10,33 @@ git clone git@github.com:VTUL/VIVOHarvester.git
 python setup.py install
 ```
 
+## Configuation
+* The local.yml example file is [here](example/configfile.yml.sample)
+* The logging_config.ini example file is [here](example/logging_config.ini.sample)
+* The upload folder structre
+```
+vivouploads/
+├── rdf
+│   ├── photos
+│   ├── publications
+│   ├── relations
+│   └── users
+└── xml
+    ├── photos
+    ├── publications
+    ├── relations
+    ├── temp
+    └── users
+```
+* The photo folder structure
+```
+harvestedImages/
+├── fullImages
+└── thumbnails
+    └── userphoto.jpeg
+```
+Place the [userphoto.jpeg](harvestedImages/thumbnails/userphoto.jpeg) to harvestedImages/thumbnails/
+
 ## Usage
 * Harvest data from Elements (Default)
 ```
