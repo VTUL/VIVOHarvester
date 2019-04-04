@@ -44,7 +44,7 @@ class Utils:
                 lambda x: x.endswith(extension),
                 os.listdir(path)))
 
-        return all_files
+        return sorted(all_files)
 
     def listdeletefiles(self, path, pattern):
 
@@ -53,7 +53,7 @@ class Utils:
                 lambda x: x.startswith(pattern),
                 os.listdir(path)))
 
-        return all_files
+        return sorted(all_files)
 
     def segmentlist(self, inputlist, length):
 

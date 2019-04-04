@@ -62,7 +62,7 @@ logger.debug('Logger initialized')
 file_utils = Utils()
 
 if args.optype == "ingest":
-    logger.debug("Ingest operation")
+    logger.debug("Start ingesting......")
 
     vivouploads = xml_folder
     extension = '.xml'
@@ -135,52 +135,8 @@ if args.optype == "ingest":
         logger.error('Error parsing file:' + xmlfile)
 
     # ingest to VIVO
+
     extension = '.rdf'
-    user_rdf_files = file_utils.listfiles(userrdfpath, extension)
-    photo_rdf_files = file_utils.listfiles(photordfpath, extension)
-    pub_rdf_files = file_utils.listfiles(pubrdfpath, extension)
-    rs_rdf_files = file_utils.listfiles(rsrdfpath, extension)
-
-    templist = file_utils.segmentlist(user_rdf_files, 10)
-    i = 1
-    for t in templist:
-        mergefilename = "usermerge" + str(i) + ".rdf"
-        file_utils.mergefiles(userrdfpath, t, mergefilename)
-        i += 1
-
-    for rdf_file in user_rdf_files:
-        os.remove(userrdfpath + rdf_file)
-
-    templist = file_utils.segmentlist(photo_rdf_files, 10)
-    i = 1
-    for t in templist:
-        mergefilename = "photomerge" + str(i) + ".rdf"
-        file_utils.mergefiles(photordfpath, t, mergefilename)
-        i += 1
-
-    for rdf_file in photo_rdf_files:
-        os.remove(photordfpath + rdf_file)
-
-    templist = file_utils.segmentlist(pub_rdf_files, 10)
-    i = 1
-    for t in templist:
-        mergefilename = "pubmerge" + str(i) + ".rdf"
-        file_utils.mergefiles(pubrdfpath, t, mergefilename)
-        i += 1
-
-    for rdf_file in pub_rdf_files:
-        os.remove(pubrdfpath + rdf_file)
-
-    templist = file_utils.segmentlist(rs_rdf_files, 10)
-    i = 1
-    for t in templist:
-        mergefilename = "rsmerge" + str(i) + ".rdf"
-        file_utils.mergefiles(rsrdfpath, t, mergefilename)
-        i += 1
-
-    for rdf_file in rs_rdf_files:
-        os.remove(rsrdfpath + rdf_file)
-
     user_rdf_files = file_utils.listfiles(userrdfpath, extension)
     photo_rdf_files = file_utils.listfiles(photordfpath, extension)
     pub_rdf_files = file_utils.listfiles(pubrdfpath, extension)
@@ -207,6 +163,7 @@ if args.optype == "ingest":
 
         for rdf_file in user_rdf_files:
             objectns = file_utils.read_file(userrdfpath + rdf_file)
+            logger.debug("Process user rdf file: " + rdf_file)
             reqcontent = vivo.get_query_content(objectns, "insert")
             response = vivo.request_vivo(
                 reqcontent, vivo_endpoint, headers, data, "update")
@@ -214,6 +171,7 @@ if args.optype == "ingest":
             os.remove(userrdfpath + rdf_file)
         for rdf_file in photo_rdf_files:
             objectns = file_utils.read_file(photordfpath + rdf_file)
+            logger.debug("Process photo rdf file: " + rdf_file)
             reqcontent = vivo.get_query_content(objectns, "insert")
             response = vivo.request_vivo(
                 reqcontent, vivo_endpoint, headers, data, "update")
@@ -221,6 +179,7 @@ if args.optype == "ingest":
             os.remove(photordfpath + rdf_file)
         for rdf_file in pub_rdf_files:
             objectns = file_utils.read_file(pubrdfpath + rdf_file)
+            logger.debug("Process publication rdf file: " + rdf_file)
             reqcontent = vivo.get_query_content(objectns, "insert")
             response = vivo.request_vivo(
                 reqcontent, vivo_endpoint, headers, data, "update")
@@ -228,6 +187,7 @@ if args.optype == "ingest":
             os.remove(pubrdfpath + rdf_file)
         for rdf_file in rs_rdf_files:
             objectns = file_utils.read_file(rsrdfpath + rdf_file)
+            logger.debug("Process relations rdf file: " + rdf_file)
             reqcontent = vivo.get_query_content(objectns, "insert")
             response = vivo.request_vivo(
                 reqcontent, vivo_endpoint, headers, data, "update")
@@ -235,7 +195,7 @@ if args.optype == "ingest":
             os.remove(rsrdfpath + rdf_file)
 
 elif args.optype == "harvest":
-    logger.debug("Harvest operation")
+    logger.debug("Start harvesting......")
 
     elements_endpoint = config['elements']['url']
     authorization = config['elements']['authorization']
@@ -244,7 +204,7 @@ elif args.optype == "harvest":
     headers = {}
     headers["Authorization"] = "Basic " + authorization
 
-    logger.debug('Harvesting: Elements all users')
+    logger.debug('Stage1: Harvesting all elements users')
 
     xmlfilename = xml_folder + "xml/temp/alluser.xml"
 
@@ -255,7 +215,7 @@ elif args.optype == "harvest":
     else:
         day = 0
 
-    logger.debug('Harvesting and set day %s', str(day))
+    logger.debug('Harvesting from Elements the dey before %s day', str(day))
 
     elements.harvest_elements_xml(
         elements_endpoint,
@@ -265,7 +225,7 @@ elif args.optype == "harvest":
         xmlfilename,
         day)
 
-    logger.debug('Harvesting: Elements individual user')
+    logger.debug('Harvesting individual user from Elements.')
 
     total_public = 0
     total_academic = 0
@@ -304,6 +264,23 @@ elif args.optype == "harvest":
     vivo_namespace = "http://collab.vt.edu/vivo/individual/"
     vivo = VIVO()
 
+    # UC1: public user change the publication privacy settings
+    if args.day and args.day > 0:
+        logger.debug("Checking public user's publications from the giving day")
+
+        if not (args.db == "off"):
+            rows = db.select_records(dbconn, "users", "public", "Y")
+
+            for row in rows:
+                xmlfilename = xml_folder + "xml/temp/" + \
+                    row['eid'].strip() + "daypublications.xml"
+                elements.harvest_elements_xml(
+                    elements_endpoint,
+                    headers,
+                    "publications",
+                    row['eid'].strip(),
+                    xmlfilename, day)
+
     for xmlfile in all_xml_files:
         with open(all_user_folder + xmlfile) as fd:
             doc = xmltodict.parse(fd.read())
@@ -339,7 +316,7 @@ elif args.optype == "harvest":
 
                 if isExist:
                     logger.debug(
-                        "Delete user file:" +
+                        "Delete user XML file:" +
                         all_user_folder +
                         xmlfile)
                     # remove user from VIVO for new insert/update or delete
@@ -355,10 +332,10 @@ elif args.optype == "harvest":
                     response = vivo.request_vivo(
                         reqcontent, vivo_update_endpoint, vivoheaders, data, "update")
                     logger.debug(
-                        "Delete response from VIVO: %s for deleting %s",
+                        "Response from VIVO: %s for deleting %s",
                         response.text,
                         uservivourl)
-                    logger.debug("The elements id: " + elementid)
+                    logger.debug("The deleted Elements user id: " + elementid)
                     # fetch the publications xml from elements and mark as
                     # delete
                     xmlfilename = xml_folder + "xml/temp/delete" + elementid + "publications.xml"
@@ -367,20 +344,19 @@ elif args.optype == "harvest":
                         headers,
                         "publications",
                         elementid,
-                        xmlfilename,
-                        day)
+                        xmlfilename)
 
                 db_op = "none"
                 if is_public == "true" and is_academic == "true" and is_current_staff == "true":
 
-                    logger.debug('Harvesting: Elements user - ' + elementid)
+                    logger.debug('Harvesting Elements public user id: ' + elementid)
 
                     filename = xml_folder + "xml/users/" + elementid + ".xml"
                     elements.harvest_elements_xml(
                         elements_endpoint, headers, "user", elementid, filename)
 
                     logger.debug(
-                        'Harvesting: Elements user - ' +
+                        'Harvesting Elements user id: ' +
                         elementid +
                         '\'s publications')
 
@@ -390,11 +366,10 @@ elif args.optype == "harvest":
                         headers,
                         "publications",
                         elementid,
-                        xmlfilename,
-                        day)
+                        xmlfilename)
 
                     logger.debug(
-                        'Harvesting: Elements user - ' +
+                        'Harvesting Elements user id: ' +
                         elementid +
                         '\'s photo')
 
@@ -411,7 +386,7 @@ elif args.optype == "harvest":
                         db_op = "toprivate" if isExist else "private"
 
                         logger.debug(
-                            'Harvesting: Elements user - ' + elementid)
+                            'Harvesting Elements private user id: ' + elementid)
 
                         filename = xml_folder + "xml/users/" + elementid + ".xml"
                         elements.harvest_elements_xml(
@@ -440,28 +415,12 @@ elif args.optype == "harvest":
 
         os.remove(all_user_folder + xmlfile)
 
-    # UC1: public user change the publication privacy settings
-    if args.day and args.day > 0:
-        logger.debug("check public user's pub incremental harvesting")
-
-        rows = db.select_records(dbconn, "users", "public", "Y")
-
-        for row in rows:
-            xmlfilename = xml_folder + "xml/temp/" + \
-                row['eid'].strip() + "publications.xml"
-            elements.harvest_elements_xml(
-                elements_endpoint,
-                headers,
-                "publications",
-                row['eid'].strip(),
-                xmlfilename,
-                day)
-
     pubfolder = xml_folder + "xml/temp/"
 
     eid = ""
     pubid = ""
-    # handle delete file first
+    # handle delete publication file first
+    logger.debug("Start deleting user's publications for update.")
     delfiles = file_utils.listdeletefiles(pubfolder, "delete")
     for delfile in delfiles:
         with open(pubfolder + delfile) as fd:
@@ -471,7 +430,7 @@ elif args.optype == "harvest":
             recid = doc["feed"]["id"]
             eid = recid.split("/")[-2]
             entries = doc["feed"]["entry"]
-            logger.debug("Process file: " + delfile)
+            logger.debug("Process publication deletion file: " + delfile)
             records = []
 
             if isinstance(entries, collections.OrderedDict):
@@ -483,9 +442,7 @@ elif args.optype == "harvest":
                 pubid = e["api:relationship"]["api:related"]["@id"]
 
                 logger.debug(
-                    "Line 431 Delete publication file:" +
-                    pubfolder +
-                    delfile)
+                    "Deleting publication id:" + pubid)
                 # remove it from VIVO for new insert or delete
                 pubvivourl = vivo_namespace + "publication" + pubid
                 logger.debug(pubvivourl)
@@ -493,19 +450,20 @@ elif args.optype == "harvest":
                 response = vivo.request_vivo(
                     reqcontent, vivo_query_endpoint, vivoheaders, data, "query")
                 rdfcontent = response.text
-                logger.debug(rdfcontent)
+                # logger.debug(rdfcontent)
                 reqcontent = vivo.get_query_content(rdfcontent, "delete")
                 response = vivo.request_vivo(
                     reqcontent, vivo_update_endpoint, vivoheaders, data, "update")
                 logger.debug(
                     "Delete response from VIVO: %s for deleting %s",
-                    response.text,
+                    str(response.status_code),
                     pubvivourl)
                 # fetch the relationship xml from elements and mark as delete
+                logger.debug("Harvesting relationships for deletion......")
                 filename = xml_folder + "xml/temp/delete" + pubid + "relationships.xml"
                 elements.harvest_elements_xml(
                     elements_endpoint, headers, "pubrelationships", pubid,
-                    filename, day)
+                    filename)
 
                 if not (args.db == "off"):
                     db.delete_record(dbconn, "publications", "pid", str(pubid))
@@ -516,12 +474,14 @@ elif args.optype == "harvest":
 
     eid = ""
     pubid = ""
-    logger.debug(xmlfiles)
+
+    logger.debug("Start processing individual publication file.")
+
     for xmlfile in xmlfiles:
         # There are two "delete" files in the folder, publication and
         # relationships
-        logger.debug("Line 464 file process:" + xmlfile)
         if "delete" not in xmlfile:
+            logger.debug("Start processing publication files in the temp folder: " + xmlfile)
             with open(pubfolder + xmlfile) as fd:
                 doc = xmltodict.parse(fd.read())
 
@@ -529,11 +489,8 @@ elif args.optype == "harvest":
                 recid = doc["feed"]["id"]
                 eid = recid.split("/")[-2]
                 entries = doc["feed"]["entry"]
-                logger.debug("Process file: " + xmlfile)
+                logger.debug("Processing all the publications in file: " + xmlfile)
                 records = []
-
-                logger.debug("Start check correct id:")
-                logger.debug("eid:" + eid)
 
                 if isinstance(entries, collections.OrderedDict):
                     records.append(entries)
@@ -541,11 +498,11 @@ elif args.optype == "harvest":
                     records = entries
 
                 for e in records:
-                    authorship = e["api:relationship"]["@type"]
-                    logger.debug("authorship type:" + authorship)
 
+                    authorship = e["api:relationship"]["@type"]
                     pubid = e["api:relationship"]["api:related"]["@id"]
-                    logger.debug("pubid:" + pubid)
+                    logger.debug("Parsing publication id: " + pubid)
+                    logger.debug("authorship type: " + authorship)
 
                     # check if rec is already in db
                     isExist = False
@@ -555,29 +512,29 @@ elif args.optype == "harvest":
 
                     if isExist and authorship == "publication-user-authorship":
                         logger.debug(
-                            "Line 499 Delete publication file:" + pubfolder + xmlfile)
+                            "Deleting a publication file:" + pubfolder + xmlfile)
                         # remove it from VIVO for new insert or delete
                         pubvivourl = vivo_namespace + "publication" + pubid
-                        logger.debug(pubvivourl)
+                        # logger.debug(pubvivourl)
                         reqcontent = vivo.get_query_content(
                             pubvivourl, "describe")
                         response = vivo.request_vivo(
                             reqcontent, vivo_query_endpoint, vivoheaders, data, "query")
                         rdfcontent = response.text
-                        logger.debug(rdfcontent)
+                        # logger.debug(rdfcontent)
                         reqcontent = vivo.get_query_content(
                             rdfcontent, "delete")
                         response = vivo.request_vivo(
                             reqcontent, vivo_update_endpoint, vivoheaders, data, "update")
                         logger.debug(
-                            "Delete response from VIVO: %s for deleting %s",
+                            "Response from VIVO: %s for deleting publication id: %s",
                             response.text,
-                            pubvivourl)
-                        # fetch the relationship xml from elements and mark
+                            pubid)
+                        # fetch the relationship xml from elements and mark as
                         # delete
                         filename = xml_folder + "xml/temp/delete" + pubid + "relationships.xml"
                         elements.harvest_elements_xml(
-                            elements_endpoint, headers, "pubrelationships", pubid, filename, day)
+                            elements_endpoint, headers, "pubrelationships", pubid, filename)
 
                     if "api:is-visible" in e["api:relationship"] and authorship == "publication-user-authorship":
 
@@ -591,14 +548,11 @@ elif args.optype == "harvest":
                         db_op = "none"
                         if public == "true" and visible == "true":
                             logger.debug(
-                                'Harvesting: Elements user - ' +
+                                'Harvesting Elements user id: ' +
                                 eid +
-                                '\'s publication - ' +
+                                '\'s publication id: ' +
                                 pubid)
 
-                            logger.debug("Start check publication order:")
-                            logger.debug("eid:" + eid)
-                            logger.debug("pubid:" + pubid)
                             filename = xml_folder + "xml/publications/" + eid + "-" + pubid + ".xml"
                             elements.harvest_elements_xml(
                                 elements_endpoint, headers, "publication", pubid, filename)
@@ -607,14 +561,13 @@ elif args.optype == "harvest":
                                 db_op = "insert"
 
                             logger.debug(
-                                'Harvesting: Elements user - ' +
-                                eid +
-                                '\'s relationship from publicationid - ' +
-                                pubid)
+                                'Harvesting publication id: ' +
+                                pubid +
+                                '\'s relationships')
 
                             filename = xml_folder + "xml/temp/" + pubid + "relationships.xml"
                             elements.harvest_elements_xml(
-                                elements_endpoint, headers, "pubrelationships", pubid, filename, day)
+                                elements_endpoint, headers, "pubrelationships", pubid, filename)
                         else:
 
                             if isExist:
@@ -623,7 +576,6 @@ elif args.optype == "harvest":
                         if not (args.db == "off"):
 
                             if db_op == "insert":
-                                logger.debug("Line 559 Insert pub:" + pubid)
                                 db.insert_publication(dbconn, pubid, "Y")
                             elif db_op == "delete":
                                 db.delete_record(
@@ -636,11 +588,12 @@ elif args.optype == "harvest":
             os.remove(pubfolder + xmlfile)
 
     # Process all relationships
-    logger.debug('Harvesting: Elements individual relationship')
+    logger.debug('Start processing individual relationship......')
 
     rsfolder = xml_folder + "xml/temp/"
 
     # list files contain delete and delete first
+    logger.debug("Handing relastions deletion files......")
     delfiles = file_utils.listdeletefiles(rsfolder, "delete")
     for delfile in delfiles:
         with open(rsfolder + delfile) as fd:
@@ -653,7 +606,7 @@ elif args.optype == "harvest":
             entries = doc["feed"]["entry"]
 
             logger.debug(
-                'Process relationships file to be deleted in xml/temp - ' +
+                'Processing relationships file to be deleted in xml/temp - ' +
                 delfile)
 
             records = []
@@ -673,7 +626,7 @@ elif args.optype == "harvest":
                             eid = rec["@href"].split("/")[-1]
 
                     logger.debug(
-                        'Delete relationship - rsid: %s, pubid: %s, eid: %s',
+                        'Deleting relationship record - rsid: %s, pubid: %s, eid: %s',
                         rsid,
                         pubid,
                         eid)
@@ -689,8 +642,8 @@ elif args.optype == "harvest":
                     response = vivo.request_vivo(
                         reqcontent, vivo_update_endpoint, vivoheaders, data, "update")
                     logger.debug(
-                        "Delete response from VIVO: %s for deleting %s",
-                        response.text,
+                        "Response from VIVO: %s for deleting %s",
+                        str(response.status_code),
                         authorship)
 
                     if not (args.db == "off"):
@@ -699,7 +652,9 @@ elif args.optype == "harvest":
         os.remove(rsfolder + delfile)
 
     xmlfiles = file_utils.listfiles(rsfolder, extension)
+    logger.debug(xmlfiles)
 
+    logger.debug("Start processing relastions files......")
     for xmlfile in xmlfiles:
         with open(rsfolder + xmlfile) as fd:
             doc = xmltodict.parse(fd.read())
@@ -710,7 +665,7 @@ elif args.optype == "harvest":
         if "entry" in doc["feed"]:
             entries = doc["feed"]["entry"]
 
-            logger.debug('Process relationships file in xml/temp - ' + xmlfile)
+            logger.debug('Parsing relationship file: ' + xmlfile)
 
             records = []
             if isinstance(entries, collections.OrderedDict):
@@ -765,14 +720,14 @@ elif args.optype == "harvest":
                             reqcontent, vivo_update_endpoint, vivoheaders, data, "update")
                         logger.debug(
                             "Delete response from VIVO: %s for deleting %s",
-                            response.text,
+                            str(response.status_code),
                             authorship)
 
                     db_op = "none"
                     if visible == "true" and public == "true":
 
                         logger.debug(
-                            'Harvesting: Elements relationship - ' + rsid)
+                            'Harvesting Elements relationship id: ' + rsid)
 
                         filename = xml_folder + "xml/relations/" + pubid + "-" + rsid + ".xml"
                         elements.harvest_elements_xml(
