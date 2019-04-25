@@ -1,8 +1,12 @@
 import requests
 import requests_mock
+import tempfile
+import os
 
+from os import path
 from unittest import TestCase
 from vivotool.harvester.elements import Elements
+from vivotool.utils.file_utils import Utils
 from datetime import datetime, timedelta
 from unittest import mock
 
@@ -11,6 +15,10 @@ class TestElements(TestCase):
 
     def setUp(self):
         self.elements = Elements()
+        self.utils = Utils()
+        self.test_dir = tempfile.mkdtemp()
+        os.makedirs(self.test_dir + "/fullImages/")
+        os.makedirs(self.test_dir + "/thumbnails/")
 
     def tearDown(self):
         self.elements = None
@@ -44,6 +52,87 @@ class TestElements(TestCase):
         output = self.elements.get_next_URL(test_xml_content)
         expected = "https://test.com?after-id=2784"
         self.assertEqual(output, expected)
+
+        # test if there is no next URL
+        test_xml_content = """<feed xmlns="http://www.w3.org/2005/Atom" xmlns:api="testapi">
+                              <api:pagination results-count="9429" items-per-page="25">
+                                <api:page position="this" href="https://test.com"/>
+                              </api:pagination>
+                            </feed>
+                            """
+
+        output = self.elements.get_next_URL(test_xml_content)
+        expected = ""
+        self.assertEqual(output, expected)
+
+        test_xml_content = """<feed xmlns="http://www.w3.org/2005/Atom" xmlns:api="testapi">
+                            </feed>
+                            """
+        output = self.elements.get_next_URL(test_xml_content)
+        expected = ""
+        self.assertEqual(output, expected)
+
+    def mock_queryurl(elements_endpoint, query_type, params, *day):
+        return "http://foo.com/" + query_type + "/" + params
+
+    def mock_elements_request(elementsurl, headers, *category):
+        class MockResponse:
+            def __init__(self, data, status_code):
+                self.data = data
+                self.status_code = status_code
+
+        if category and category[0] == "photo":
+            return MockResponse("<feed>test</feed>\n", 200)
+        else:
+            return "<feed>test</feed>\n"
+
+    def mock_save_photo_file(content, filename):
+        content = "<feed>test</feed>\n"
+        with open(filename, "w") as file:
+            file.write(content)
+
+    @mock.patch(
+        'vivotool.harvester.elements.Elements.createElementsQueryURL',
+        side_effect=mock_queryurl)
+    @mock.patch(
+        'vivotool.harvester.elements.Elements.elements_request',
+        side_effect=mock_elements_request)
+    @mock.patch(
+        'vivotool.utils.file_utils.Utils.save_photo_file',
+        side_effect=mock_save_photo_file)
+    def test_harvest_elements_xml(self, m1, m2, m3):
+
+        # test query_type == "photo"
+        self.elements.harvest_elements_xml(
+            'http://foo.com/', "", "photo", "1003", self.test_dir + "/")
+
+        imagefile1 = path.join(self.test_dir, 'fullImages/1003.jpeg')
+        imagefile2 = path.join(self.test_dir, 'thumbnails/1003.jpeg')
+        output = self.utils.read_file(imagefile1)
+        self.assertEqual(output, "<feed>test</feed>\n")
+        output = self.utils.read_file(imagefile2)
+        self.assertEqual(output, "<feed>test</feed>\n")
+
+        # test query_type == "users"
+        testfile = path.join(self.test_dir, 'testuser.xml')
+        self.elements.harvest_elements_xml(
+            'http://foo.com/', "", "users", "1003", testfile)
+        output = self.utils.read_file(testfile)
+        self.assertEqual(output, "<feed>test</feed>\n")
+
+        # test query_type == "publications" with day
+        testfile = path.join(self.test_dir, 'testpublications.xml')
+        self.elements.harvest_elements_xml(
+            'http://foo.com/', "", "publications", "9003", testfile, 10)
+        output = self.utils.read_file(testfile)
+        self.assertEqual(output, "<feed>test</feed>\n")
+
+        # test query_type = "user"
+        testfile = path.join(self.test_dir, 'testsingleuser.xml')
+        self.elements.harvest_elements_xml(
+            'http://foo.com/', "", "user", "1003", testfile)
+        output = self.utils.read_file(testfile)
+        self.assertEqual(output, "<feed>test</feed>\n")
 
     def test_createElementsQueryURL(self):
 
@@ -123,6 +212,12 @@ class TestElements(TestCase):
         output = self.elements.createElementsQueryURL(
             elements_endpoint, "photo", 1033)
         self.assertEqual(output, elements_endpoint + "users/1033/photo")
+
+        # check invalidated input
+        self.assertRaises(
+            ValueError,
+            lambda: self.elements.createElementsQueryURL(
+                elements_endpoint, "xyz", 1033))
 
     def test_last_modified_date(self):
 
