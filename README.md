@@ -1,3 +1,7 @@
+# VIVO Harvester for Symplectic Elements
+
+A modern, full or incremental harvester to collect data from Symplectic Elements for import into VIVO
+
 # [VIVOHarvester](https://pypi.org/project/VIVOHarvester/)
 
 ## Installation
